@@ -1,0 +1,146 @@
+version: "3.7"
+
+services:
+  # MySQL Service
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin123
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - webnet
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  # WordPress Service
+  wordpress:
+    image: wordpress:latest
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: admin
+      WORDPRESS_DB_PASSWORD: admin123
+      WORDPRESS_DB_NAME: wordpress
+    ports:
+      - "80:80"
+    networks:
+      - webnet
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  # Prometheus Service
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - prometheus_data:/prometheus
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
+      - source: prometheus_rules
+        target: /etc/prometheus/alert.rules.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - webnet
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  # Alertmanager Service
+  alertmanager:
+    image: prom/alertmanager
+    configs:
+      - source: alertmanager_config
+        target: /etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    networks:
+      - webnet
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+  
+  # Grafana Service
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin  # Default admin user, change as needed
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Default admin password, change as needed
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    networks:
+      - webnet
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    depends_on:
+      - prometheus
+
+  # Node Exporter
+  node_exporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.ignored-mount-points"
+      - "^/(sys|proc|dev|host|etc)($$|/)"
+    ports:
+      - 9100:9100
+    networks:
+      - webnet
+    deploy:
+      mode: global
+
+  # Scaler Service
+  scaler:
+    image: my-scaler-image
+    environment:
+      - SERVICE_NAME=wj-wordpress_wordpress
+      - SCALE_UP_FACTOR=1
+      - SCALE_DOWN_FACTOR=1
+      - MAX_REPLICAS=5
+      - MIN_REPLICAS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "5000:5000"
+    networks:
+      - webnet
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  webnet:
+    driver: overlay
+
+volumes:
+  db_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+configs:
+  prometheus_config:
+    external: true
+  alertmanager_config:
+    external: true
+  prometheus_rules:
+    external: true

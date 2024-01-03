@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      - targets: ['wj-wordpress_node_exporter:9100']
+      
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['wj-wordpress_alertmanager:9093']
+rule_files:
+  - "alert.rules.yml"

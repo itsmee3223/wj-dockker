@@ -1,0 +1,48 @@
+groups:
+- name: high_traffic_system_detection
+  rules:
+  
+  - alert: HighNetworkTraffic
+    expr: rate(node_network_receive_bytes_total[5m]) > (10 * 1024 * 1024)
+    for: 5m
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "High network traffic detected"
+      description: "Network inbound has exceeded 10 MBps for over 5 minutes."
+
+  - alert: HighLoadAverage
+    expr: node_load1 > (count(node_cpu_seconds_total{mode="system"}) * 0.7)
+    for: 5m
+    labels:
+      severity: "warning"
+    annotations:
+      summary: "High load average"
+      description: "The 1-minute load average is greater than 70% of the total CPU cores for more than 5 minutes."
+
+  - alert: HighCPUUsage
+    expr: (100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+    for: 5m
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "High CPU usage detected"
+      description: "CPU usage has been above 80% for over 5 minutes."
+
+  - alert: LowMemoryAvailable
+    expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 20
+    for: 5m
+    labels:
+      severity: "warning"
+    annotations:
+      summary: "Low memory available"
+      description: "Available memory is less than 20% of total memory."
+
+  - alert: HighDiskUsage
+    expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 80
+    for: 5m
+    labels:
+      severity: "warning"
+    annotations:
+      summary: "High disk usage"
+      description: "Disk usage is above 80% on one of the filesystems."

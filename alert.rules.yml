@@ -1,0 +1,47 @@
+groups:
+- name: wordpress_high_traffic_detection
+  rules:
+  - alert: HighNetworkTraffic
+    expr: rate(node_network_receive_bytes_total[5m]) > (10 * 1024 * 1024)
+    for: 5m
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "High network traffic detected"
+      description: "Network throughput has exceeded 10 MBps for over 5 minutes."
+
+  - alert: HighTCPConnections
+    expr: rate(node_netstat_Tcp_ActiveOpens[5m]) > 100
+    for: 1m
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "High rate of TCP connections"
+      description: "More than 100 new active TCP connections per second."
+
+  - alert: HighLoadAverage
+    expr: node_load5 > 10
+    for: 1m
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "High load average"
+      description: "The 5-minute load average is greater than 10 on the host."
+
+  - alert: HighCPUUsage
+    expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+    for: 1m
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "High CPU usage detected"
+      description: "CPU usage has been above 80% for over 5 minutes."
+
+  - alert: LowMemoryAvailable
+    expr: node_memory_MemAvailable_bytes < (512 * 1024 * 1024)
+    for: 1m
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "Low memory available"
+      description: "Available memory is less than 512MB."

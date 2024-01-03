@@ -1,0 +1,9 @@
+route:
+  group_by: ['alertname']
+  repeat_interval: 1h
+  receiver: 'webhook_scaler'
+
+receivers:
+- name: 'webhook_scaler'
+  webhook_configs:
+  - url: 'http://wj-wordpress_scaler:5000/scale'
